@@ -28,6 +28,7 @@ function render(el, container) {
       children: [el]
     }
   }
+  root = nextUnitOfWork
 }
 
 const React = {
@@ -35,6 +36,7 @@ const React = {
   createElement
 }
 
+let root = null
 let nextUnitOfWork = null
 function workloop(deadline) {
   // 是否让路
@@ -45,7 +47,23 @@ function workloop(deadline) {
     shouldYield = deadline.timeRemaining() < 1
   }
 
+  if(!nextUnitOfWork && root) {
+    commitRoot(root)
+  }
+
   requestIdleCallback(workloop)
+}
+
+function commitRoot(root) {
+  commitWork(root.child)
+  root = null
+}
+
+function commitWork(fiber) {
+  if(!fiber) return
+  fiber.parent.dom.append(fiber.dom)
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
 }
 
 function createDom(type) {
@@ -90,7 +108,7 @@ function performUnitOfWork(fiber) {
   // 1.创建dom
   if (!fiber.dom) {
     const dom = (fiber.dom = createDom(fiber.type))
-    fiber.parent.dom.append(dom)
+    // fiber.parent.dom.append(dom)
 
     // 2.处理props
     updateProps(dom, fiber.props)
