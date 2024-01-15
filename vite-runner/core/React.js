@@ -110,20 +110,30 @@ function initChildren(fiber, children) {
   })
 }
 
+function updateFunctionComponent(fiber) {
+  
+  const children = [fiber.type(fiber.props)]
+  initChildren(fiber, children)
+}
+
+function updateHostComponent(fiber) {
+  if (!fiber.dom) {
+    const dom = (fiber.dom = createDom(fiber.type))
+
+    // 2.处理props
+    updateProps(dom, fiber.props)
+  }
+
+  // 3.转换链表 设置好指针
+  const children = fiber.props.children
+  initChildren(fiber, children)
+}
+
 function performUnitOfWork(fiber) {
   // 1.创建dom
   const isFunctionComponent = typeof fiber.type === "function"
-  if(!isFunctionComponent) {
-    if (!fiber.dom) {
-      const dom = (fiber.dom = createDom(fiber.type))
-  
-      // 2.处理props
-      updateProps(dom, fiber.props)
-    }
-  }
-  // 3.转换链表 设置好指针
-  const children = isFunctionComponent ? [fiber.type(fiber.props)] : fiber.props.children
-  initChildren(fiber, children)
+  if(isFunctionComponent) updateFunctionComponent(fiber)
+  else updateHostComponent(fiber)
   // 4.返回下一个
   // 深度优先遍历
   // 子节点，兄弟节点，叔叔节点
