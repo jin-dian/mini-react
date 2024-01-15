@@ -14,7 +14,8 @@ function createElement(type, props, ...children) {
     props: {
       ...props,
       children: children.map(child => {
-        return typeof child === 'string' ? createTextNode(child) : child
+        const isTextElement = typeof child === 'string' || typeof child === 'number'
+        return isTextElement ? createTextNode(child) : child
       })
     }
   }
@@ -28,6 +29,7 @@ function render(el, container) {
       children: [el]
     }
   }
+  root = nextUnitOfWork
 }
 
 const React = {
@@ -35,17 +37,40 @@ const React = {
   createElement
 }
 
+let root = null
 let nextUnitOfWork = null
 function workloop(deadline) {
-  nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
   // 是否让路
   let shouldYield = false
 
   while(!shouldYield && nextUnitOfWork) {
-    shouldYield = deadline.timeRemaining() < 30
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+    shouldYield = deadline.timeRemaining() < 1
+  }
+
+  if(!nextUnitOfWork && root) {
+    commitRoot(root)
   }
 
   requestIdleCallback(workloop)
+}
+
+function commitRoot() {
+  commitWork(root.child)
+  root = null
+}
+
+function commitWork(fiber) {
+  if(!fiber) return
+  let fiberParent = fiber.parent
+  while(!fiberParent.dom) {
+    fiberParent = fiberParent.parent
+  }
+  if(fiber.dom) {
+    fiberParent.dom.append(fiber.dom)
+  }
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
 }
 
 function createDom(type) {
@@ -63,8 +88,7 @@ function updateProps(dom, props) {
   })
 }
 
-function initChildren(fiber) {
-  const children = fiber.props.children
+function initChildren(fiber, children) {
   // 记录上一个孩子节点
   let prevChild = null
   children.forEach((child, index) => {
@@ -86,27 +110,44 @@ function initChildren(fiber) {
   })
 }
 
-function performUnitOfWork(fiber) {
-  // 1.创建dom
+function updateFunctionComponent(fiber) {
+  
+  const children = [fiber.type(fiber.props)]
+  initChildren(fiber, children)
+}
+
+function updateHostComponent(fiber) {
   if (!fiber.dom) {
     const dom = (fiber.dom = createDom(fiber.type))
-    fiber.parent.dom.append(dom)
 
     // 2.处理props
-    updateProps(fiber.dom, fiber.props)
+    updateProps(dom, fiber.props)
   }
+
   // 3.转换链表 设置好指针
-  initChildren(fiber)
+  const children = fiber.props.children
+  initChildren(fiber, children)
+}
+
+function performUnitOfWork(fiber) {
+  // 1.创建dom
+  const isFunctionComponent = typeof fiber.type === "function"
+  if(isFunctionComponent) updateFunctionComponent(fiber)
+  else updateHostComponent(fiber)
   // 4.返回下一个
   // 深度优先遍历
   // 子节点，兄弟节点，叔叔节点
   if(fiber.child) {
     return fiber.child
   }
-  if(fiber.sibling) {
-    return fiber.sibling
+
+  let nextFiber = fiber
+  while(nextFiber) {
+    if(nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
   }
-  return fiber.parent?.sibling
 }
 
 requestIdleCallback(workloop)
