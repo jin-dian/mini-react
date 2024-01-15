@@ -14,7 +14,8 @@ function createElement(type, props, ...children) {
     props: {
       ...props,
       children: children.map(child => {
-        return typeof child === 'string' ? createTextNode(child) : child
+        const isTextElement = typeof child === 'string' || typeof child === 'number'
+        return isTextElement ? createTextNode(child) : child
       })
     }
   }
@@ -121,7 +122,7 @@ function performUnitOfWork(fiber) {
     }
   }
   // 3.转换链表 设置好指针
-  const children = isFunctionComponent ? [fiber.type()] : fiber.props.children
+  const children = isFunctionComponent ? [fiber.type(fiber.props)] : fiber.props.children
   initChildren(fiber, children)
   // 4.返回下一个
   // 深度优先遍历
