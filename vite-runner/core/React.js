@@ -37,12 +37,12 @@ const React = {
 
 let nextUnitOfWork = null
 function workloop(deadline) {
-  nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
   // 是否让路
   let shouldYield = false
 
   while(!shouldYield && nextUnitOfWork) {
-    shouldYield = deadline.timeRemaining() < 30
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+    shouldYield = deadline.timeRemaining() < 1
   }
 
   requestIdleCallback(workloop)
@@ -93,7 +93,7 @@ function performUnitOfWork(fiber) {
     fiber.parent.dom.append(dom)
 
     // 2.处理props
-    updateProps(fiber.dom, fiber.props)
+    updateProps(dom, fiber.props)
   }
   // 3.转换链表 设置好指针
   initChildren(fiber)
