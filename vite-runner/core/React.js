@@ -83,7 +83,12 @@ function updateProps(dom, props) {
   Object.keys(props).forEach((key) => {
     // 不处理children
     if (key !== "children") {
-      dom[key] = props[key]
+      if(key.startsWith("on")) {
+        const eventType = key.slice(2).toLowerCase()
+        document.addEventListener(eventType, props[key])
+      } else {
+        dom[key] = props[key]
+      }
     }
   })
 }
