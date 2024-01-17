@@ -1,11 +1,18 @@
 import React from "./core/React.js"
 
+let count = 10
+let props = {id: '111'}
 function Counter({num}) {
+  // update
   function handleClick() {
     console.log('click')
+    count++
+    props = {id: count}
+    React.update()
   }
-  return <div>count: {num}
-  <button onClick={handleClick}>click</button>
+  return <div {...props}>
+    count: {count}
+    <button onClick={handleClick}>click</button>
   </div>
 }
 

@@ -32,12 +32,8 @@ function render(el, container) {
   root = nextUnitOfWork
 }
 
-const React = {
-  render,
-  createElement
-}
-
 let root = null
+let currentRoot = null
 let nextUnitOfWork = null
 function workloop(deadline) {
   // 是否让路
@@ -57,6 +53,7 @@ function workloop(deadline) {
 
 function commitRoot() {
   commitWork(root.child)
+  currentRoot = root
   root = null
 }
 
@@ -66,8 +63,12 @@ function commitWork(fiber) {
   while(!fiberParent.dom) {
     fiberParent = fiberParent.parent
   }
-  if(fiber.dom) {
-    fiberParent.dom.append(fiber.dom)
+  if(fiber.effectTag === "update") {
+    updateProps(fiber.dom, fiber.props, fiber.alternate?.props)
+  } else if (fiber.effectTag === "placement") {
+    if(fiber.dom) {
+      fiberParent.dom.append(fiber.dom)
+    }
   }
   commitWork(fiber.child)
   commitWork(fiber.sibling)
@@ -79,15 +80,39 @@ function createDom(type) {
   : document.createElement(type)
 }
 
-function updateProps(dom, props) {
-  Object.keys(props).forEach((key) => {
+function updateProps(dom, nextProps, prevProps) {
+  // Object.keys(props).forEach((key) => {
+  //   // 不处理children
+  //   if (key !== "children") {
+  //     if(key.startsWith("on")) {
+  //       const eventType = key.slice(2).toLowerCase()
+  //       document.addEventListener(eventType, props[key])
+  //     } else {
+  //       dom[key] = props[key]
+  //     }
+  //   }
+  // })
+  // 1.old 有  new 没有 删除
+  Object.keys(prevProps).forEach(key => {
+    if(key !== "children") {
+      if(!(key in nextProps)) {
+        dom.removeAttribute(key)
+      }
+    }
+  })
+  // 2.new 有  old 没有 添加
+  // 3.new 有  old 有   修改
+  Object.keys(nextProps).forEach((key) => {
     // 不处理children
     if (key !== "children") {
-      if(key.startsWith("on")) {
-        const eventType = key.slice(2).toLowerCase()
-        document.addEventListener(eventType, props[key])
-      } else {
-        dom[key] = props[key]
+      if(nextProps[key] !== prevProps[key]) {
+        if(key.startsWith("on")) {
+          const eventType = key.slice(2).toLowerCase()
+          document.removeEventListener(eventType, prevProps[key])
+          document.addEventListener(eventType, nextProps[key])
+        } else {
+          dom[key] = nextProps[key]
+        }
       }
     }
   })
@@ -95,15 +120,38 @@ function updateProps(dom, props) {
 
 function initChildren(fiber, children) {
   // 记录上一个孩子节点
+  let oldFiber = fiber.alternate?.child
   let prevChild = null
   children.forEach((child, index) => {
-    const newFiber = {
-      type: child.type,
-      props: child.props,
-      child: null,
-      parent: fiber,
-      dibling: null,
-      dom: null
+    const isSameType = oldFiber && oldFiber.type === child.type
+
+    let newFiber = null
+    if(isSameType) {
+      // update
+      newFiber = {
+        type: child.type,
+        props: child.props,
+        child: null,
+        parent: fiber,
+        sibling: null,
+        dom: oldFiber.dom,
+        effectTag: "update",
+        alternate: oldFiber
+      }
+    } else {
+      newFiber = {
+        type: child.type,
+        props: child.props,
+        child: null,
+        parent: fiber,
+        sibling: null,
+        dom: null,
+        effectTag: "placement"
+      }
+    }
+
+    if(oldFiber) {
+      oldFiber = oldFiber.sibling
     }
     if(index === 0) {
       fiber.child = newFiber
@@ -126,7 +174,7 @@ function updateHostComponent(fiber) {
     const dom = (fiber.dom = createDom(fiber.type))
 
     // 2.处理props
-    updateProps(dom, fiber.props)
+    updateProps(dom, fiber.props, {})
   }
 
   // 3.转换链表 设置好指针
@@ -156,5 +204,20 @@ function performUnitOfWork(fiber) {
 }
 
 requestIdleCallback(workloop)
+
+function update(el, container) {
+  nextUnitOfWork = {
+    dom: currentRoot.dom,
+    props: currentRoot.props,
+    alternate: currentRoot
+  }
+  root = nextUnitOfWork
+}
+
+const React = {
+  render,
+  update,
+  createElement
+}
 
 export default React
