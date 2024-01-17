@@ -23,16 +23,17 @@ function createElement(type, props, ...children) {
 
 
 function render(el, container) {
-  nextUnitOfWork = {
+  wipRoot = {
     dom: container,
     props: {
       children: [el]
     }
   }
-  root = nextUnitOfWork
+  nextUnitOfWork = wipRoot
 }
 
-let root = null
+// work in progress
+let wipRoot = null
 let currentRoot = null
 let nextUnitOfWork = null
 function workloop(deadline) {
@@ -44,17 +45,17 @@ function workloop(deadline) {
     shouldYield = deadline.timeRemaining() < 1
   }
 
-  if(!nextUnitOfWork && root) {
-    commitRoot(root)
+  if(!nextUnitOfWork && wipRoot) {
+    commitRoot(wipRoot)
   }
 
   requestIdleCallback(workloop)
 }
 
 function commitRoot() {
-  commitWork(root.child)
-  currentRoot = root
-  root = null
+  commitWork(wipRoot.child)
+  currentRoot = wipRoot
+  wipRoot = null
 }
 
 function commitWork(fiber) {
@@ -118,7 +119,7 @@ function updateProps(dom, nextProps, prevProps) {
   })
 }
 
-function initChildren(fiber, children) {
+function reconcileChildren(fiber, children) {
   // 记录上一个孩子节点
   let oldFiber = fiber.alternate?.child
   let prevChild = null
@@ -166,7 +167,7 @@ function initChildren(fiber, children) {
 function updateFunctionComponent(fiber) {
   
   const children = [fiber.type(fiber.props)]
-  initChildren(fiber, children)
+  reconcileChildren(fiber, children)
 }
 
 function updateHostComponent(fiber) {
@@ -179,7 +180,7 @@ function updateHostComponent(fiber) {
 
   // 3.转换链表 设置好指针
   const children = fiber.props.children
-  initChildren(fiber, children)
+  reconcileChildren(fiber, children)
 }
 
 function performUnitOfWork(fiber) {
@@ -206,12 +207,12 @@ function performUnitOfWork(fiber) {
 requestIdleCallback(workloop)
 
 function update(el, container) {
-  nextUnitOfWork = {
+  wipRoot = {
     dom: currentRoot.dom,
     props: currentRoot.props,
     alternate: currentRoot
   }
-  root = nextUnitOfWork
+  nextUnitOfWork = wipRoot
 }
 
 const React = {
