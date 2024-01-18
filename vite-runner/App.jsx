@@ -2,9 +2,13 @@ import React from "./core/React.js"
 
 let showBar = false
 function Counter({num}) {
-  function Foo() {
-    return <div>foo</div>
-  }
+  const foo = (
+    <div>
+      foo
+      <div>child1</div>
+      <div>child2</div>
+    </div>
+  )
   const bar = <p>bar</p>
 
   function handleShowBar() {
@@ -14,7 +18,7 @@ function Counter({num}) {
 
   return <div>
     Counter
-    <div>{showBar ? bar : <Foo></Foo>}</div>
+    <div>{showBar ? bar : foo}</div>
     <button onClick={handleShowBar}>click</button>
   </div>
 }
