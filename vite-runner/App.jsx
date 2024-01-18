@@ -1,25 +1,50 @@
 import React from "./core/React.js"
 
-let showBar = false
-function Counter() {
-  const bar = <p>bar</p>
-
-  function handleShowBar() {
-    showBar = !showBar
-    React.update()
+let countFoo = 1
+function Foo() {
+  console.log("foo rerun")
+  let update = React.update()
+  function handleClick() {
+    countFoo++
+    update()
   }
 
   return <div>
-    Counter
-    <button onClick={handleShowBar}>click</button>
-    {showBar && bar}
+    <h1>foo</h1>
+    {countFoo}
+    <button onClick={handleClick}>click</button>
   </div>
 }
 
+let countBar = 1
+function Bar() {
+  let update = React.update()
+  console.log("foo rerun")
+  function handleClick() {
+    countBar++
+    update()
+  }
+
+  return <div>
+    <h1>bar</h1>
+    {countBar}
+    <button onClick={handleClick}>click</button>
+  </div>
+}
+
+let countRoot = 1
 function App() {
-  return <div>hi-mini-react
-    <Counter num={10}></Counter>
-    {/* <Counter num={20}></Counter> */}
+  let update = React.update()
+  console.log("app rerun")
+  function handleClick() {
+    countRoot++
+    update()
+  }
+  return <div>
+    hi-mini-react count: {countRoot}
+    <button onClick={handleClick}>click</button>
+    <Foo></Foo>
+    <Bar></Bar>
     </div>
 }
 

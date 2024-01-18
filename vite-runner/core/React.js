@@ -37,12 +37,18 @@ let wipRoot = null
 let currentRoot = null
 let nextUnitOfWork = null
 let deletions = []
+let wipFiber = null
 function workloop(deadline) {
   // 是否让路
   let shouldYield = false
 
   while(!shouldYield && nextUnitOfWork) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+
+    if(wipRoot?.sibling?.type === nextUnitOfWork?.type) {
+      nextUnitOfWork = undefined
+    }
+
     shouldYield = deadline.timeRemaining() < 1
   }
 
@@ -124,8 +130,8 @@ function updateProps(dom, nextProps, prevProps) {
       if(nextProps[key] !== prevProps[key]) {
         if(key.startsWith("on")) {
           const eventType = key.slice(2).toLowerCase()
-          document.removeEventListener(eventType, prevProps[key])
-          document.addEventListener(eventType, nextProps[key])
+          dom.removeEventListener(eventType, prevProps[key])
+          dom.addEventListener(eventType, nextProps[key])
         } else {
           dom[key] = nextProps[key]
         }
@@ -193,6 +199,7 @@ function reconcileChildren(fiber, children) {
 }
 
 function updateFunctionComponent(fiber) {
+  wipFiber = fiber
   
   const children = [fiber.type(fiber.props)]
   reconcileChildren(fiber, children)
@@ -234,13 +241,20 @@ function performUnitOfWork(fiber) {
 
 requestIdleCallback(workloop)
 
-function update(el, container) {
-  wipRoot = {
-    dom: currentRoot.dom,
-    props: currentRoot.props,
-    alternate: currentRoot
+function update() {
+  let currentFiber = wipFiber
+  return () => {
+    wipRoot = {
+      ...currentFiber,
+      alternate: currentFiber
+    }
+    // wipRoot = {
+    //   dom: currentRoot.dom,
+    //   props: currentRoot.props,
+    //   alternate: currentRoot
+    // }
+    nextUnitOfWork = wipRoot
   }
-  nextUnitOfWork = wipRoot
 }
 
 const React = {
