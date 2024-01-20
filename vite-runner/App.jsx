@@ -5,10 +5,18 @@ function Foo() {
   const [count, setCount] = React.useState(10)
   const [bar, setBar] = React.useState("bar")
   function handleClick() {
-    // setCount((c) => c + 1)
+    setCount((c) => c + 1)
     // setBar("barbar")
     setBar("bar")
   }
+
+  React.useEffect(() => {
+    console.log("init")
+  }, [])
+
+  React.useEffect(() => {
+    console.log("update", count)
+  }, [count])
 
   return <div>
     <h1>foo</h1>
